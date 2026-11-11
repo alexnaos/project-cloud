@@ -16,23 +16,21 @@ wasm-bindgen-futures = "0.4.80"
 gloo-net = { version = "0.7.0", features = ["json"] }
 web-sys = { version = "0.3.107", features = ["Window", "Document", "HtmlElement", "Blob", "Url", "Element"] }
 js-sys = "0.3.107"
-
-# ИСПРАВЛЕННЫЙ ZIP: берем только чистый Rust (deflate), без C-компилятора (zstd)
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
 
-# Библиотеки для будущих шагов (пока закомментированы, чтобы не мешать сборке)
-# leptos-column-browser = "0.1"
-# s-zip = { version = "0.15", features = ["async"] }
-# opendal = { version = "0.56", features = ["services-gdrive", "services-yandex-disk"] }
-
-# Серверные зависимости (используются только при сборке бэкенда)
+# --- Серверные зависимости (только для ssr, не попадают в wasm) ---
 axum = { version = "0.8.0", optional = true }
 leptos_axum = { version = "0.8.0", optional = true }
 tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
 wasm-bindgen = { version = "0.2.106", optional = true }
 reqwest = { version = "0.13.5", features = ["json"] }
+
+sqlx = { version = "0.8.3", features = ["runtime-tokio", "sqlite", "macros"], optional = true }
+opendal = { version = "0.56", features = ["services-yandex-disk", "services-gdrive", "services-webdav"], optional = true }
 walkdir = "2.5.0"
+uuid = { version = "1.0", features = ["v4"], optional = true }
+chrono = { version = "0.4", features = ["clock"], optional = true }
 
 [features]
 hydrate = [
@@ -44,12 +42,15 @@ ssr = [
     "dep:axum",
     "dep:tokio",
     "dep:leptos_axum",
+    "dep:sqlx",
+    "dep:opendal",
+    "dep:uuid",
+    "dep:chrono",
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",
 ]
 
-# Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]
 inherits = "release"
 opt-level = 'z'
