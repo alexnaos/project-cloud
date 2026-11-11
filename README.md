@@ -1,91 +1,86 @@
-<picture>
-    <source srcset="https://raw.githubusercontent.com/leptos-rs/leptos/main/docs/logos/Leptos_logo_Solid_White.svg" media="(prefers-color-scheme: dark)">
-    <img src="https://raw.githubusercontent.com/leptos-rs/leptos/main/docs/logos/Leptos_logo_RGB.svg" alt="Leptos Logo">
-</picture>
 
-# Leptos Axum Starter Template
+```markdown
+# ☁️ Project-Cloud: Локальный проводник с отправкой в облака
 
-This is a template for use with the [Leptos](https://github.com/leptos-rs/leptos) web framework and the [cargo-leptos](https://github.com/akesson/cargo-leptos) tool using [Axum](https://github.com/tokio-rs/axum).
+Полнофункциональное веб-приложение для просмотра локальных файлов, выбора нужных данных, создания ZIP-архивов «на лету» и их прямой отправки в облачные хранилища. 
 
-## Creating your template repo
+Проект написан на **Rust** с использованием **Leptos** (фронтенд, компилируется в WebAssembly) и **Axum** (бэкенд).
 
-If you don't have `cargo-leptos` installed you can install it with
+## ✨ Возможности (Features)
 
-```bash
-cargo install cargo-leptos --locked
+*   **📁 Классический проводник:** Удобный интерфейс с навигацией по папкам, кнопкой «Назад» и ручным вводом пути.
+*   **☑️ Множественный выбор:** Возможность выбирать как отдельные файлы, так и целые папки (с помощью чекбоксов).
+*   **📊 Подсчет размера:** Автоматический рекурсивный подсчет размера папок. Отображение общего объема выбранных данных в реальном времени.
+*   **📦 Умная архивация:** Создание ZIP-архивов на стороне сервера (в памяти) без сохранения промежуточных файлов на диск. Поддерживается сохранение структуры папок.
+*   **☁️ Интеграция с облаками:** Прямая отправка архивов на **Яндекс.Диск** через библиотеку Apache OpenDAL.
+*   **💾 База данных аккаунтов:** Сохранение токенов доступа в локальную базу данных SQLite (аккаунты не теряются при перезапуске).
+
+## 🛠️ Технологический стек
+
+*   **Язык:** Rust (nightly)
+*   **Фронтенд:** [Leptos](https://leptos.dev/) (WASM, SSR, Hydration)
+*   **Бэкенд:** [Axum](https://github.com/tokio-rs/axum)
+*   **Асинхронность:** Tokio
+*   **База данных:** SQLx + SQLite
+*   **Работа с облаками:** [Apache OpenDAL](https://opendal.apache.org/)
+*   **Архивация:** `zip` (только алгоритм Deflate, без C-зависимостей)
+*   **Обход папок:** `walkdir`
+
+## 🚀 Установка и запуск
+
+### Предварительные требования
+
+1.  **Rust:** Установите [rustup](https://rustup.rs/).
+2.  **cargo-leptos:** Инструмент для сборки full-stack приложений на Leptos.
+    ```bash
+    cargo install cargo-leptos --locked
+    ```
+3.  **WebAssembly target:**
+    ```bash
+    rustup toolchain install nightly --allow-downgrade
+    rustup target add wasm32-unknown-unknown --toolchain nightly
+    ```
+4.  **Sass:** Для компиляции стилей.
+    *   *Windows:* `npm install -g sass` (если установлен Node.js) или `choco install sass`.
+    *   *Mac/Linux:* `brew install sass/sass/sass` или через пакетный менеджер вашей ОС.
+
+### Клонирование и запуск
+
+1. Перейдите в папку с проектом:
+   ```bash
+   cd project-cloud
+   ```
+2. Запустите сервер разработки (с горячей перезагрузкой):
+   ```bash
+   cargo leptos watch
+   ```
+3. Откройте браузер и перейдите по адресу: `http://127.0.0.1:3000`
+
+## 🔑 Как пользоваться (Инструкция)
+
+1.  **Навигация:** Используйте интерфейс для перехода по папкам вашего компьютера (по умолчанию открывается диск `C:/`).
+2.  **Добавление аккаунта Яндекс.Диска:**
+    *   Для тестирования получите OAuth-токен на [Яндекс Полигоне](https://yandex.com/dev/disk/poligon).
+    *   В правой панели нажмите **«➕ Добавить аккаунт»**.
+    *   Введите произвольное название (например, «Мой диск») и вставьте токен.
+3.  **Отправка:**
+    *   Поставьте галочки на нужных файлах или папках.
+    *   Выберите добавленный аккаунт в выпадающем списке.
+    *   Нажмите **«🚀 Архивировать и Отправить»**.
+    *   Дождитесь сообщения об успешной загрузке в нижней панели. Архив появится в корне вашего Яндекс.Диска.
+
+## 🗺️ Планы по развитию (Roadmap)
+
+- [x] Базовый проводник и выбор файлов.
+- [x] Создание ZIP-архивов на сервере.
+- [x] Поддержка Яндекс.Диска (через OpenDAL).
+- [ ] Добавление поддержки **Google Drive** (OAuth 2.0).
+- [ ] Добавление поддержки **Mail.ru Cloud** (через WebDAV).
+- [ ] Отображение прогресс-бара загрузки для больших архивов.
+- [ ] Возможность удаления аккаунтов из базы данных.
+
+## 📄 Лицензия
+
+Этот проект распространяется под лицензией MIT. Вы можете свободно использовать, изменять и распространять его.
 ```
 
-Then run
-```bash
-cargo leptos new --git https://github.com/leptos-rs/start-axum
-```
-
-to generate a new project template.
-
-```bash
-cd project-cloud
-```
-
-to go to your newly created project.
-Feel free to explore the project structure, but the best place to start with your application code is in `src/app.rs`.
-Additionally, Cargo.toml may need updating as new versions of the dependencies are released, especially if things are not working after a `cargo update`.
-
-## Running your project
-
-```bash
-cargo leptos watch
-```
-
-## Installing Additional Tools
-
-By default, `cargo-leptos` uses `nightly` Rust, `cargo-generate`, and `sass`. If you run into any trouble, you may need to install one or more of these tools.
-
-1. `rustup toolchain install nightly --allow-downgrade` - make sure you have Rust nightly
-2. `rustup target add wasm32-unknown-unknown` - add the ability to compile Rust to WebAssembly
-3. `cargo install cargo-generate` - install `cargo-generate` binary (should be installed automatically in future)
-4. `npm install -g sass` - install `dart-sass` (should be optional in future
-5. Run `npm install` in end2end subdirectory before test
-
-## Compiling for Release
-```bash
-cargo leptos build --release
-```
-
-Will generate your server binary in target/release and your site package in target/site
-
-## Testing Your Project
-```bash
-cargo leptos end-to-end
-```
-
-```bash
-cargo leptos end-to-end --release
-```
-
-Cargo-leptos uses Playwright as the end-to-end test tool.
-Tests are located in end2end/tests directory.
-
-## Executing a Server on a Remote Machine Without the Toolchain
-After running a `cargo leptos build --release` the minimum files needed are:
-
-1. The server binary located in `target/server/release`
-2. The `site` directory and all files within located in `target/site`
-
-Copy these files to your remote server. The directory structure should be:
-```text
-project-cloud
-site/
-```
-Set the following environment variables (updating for your project as needed):
-```sh
-export LEPTOS_OUTPUT_NAME="project-cloud"
-export LEPTOS_SITE_ROOT="site"
-export LEPTOS_SITE_PKG_DIR="pkg"
-export LEPTOS_SITE_ADDR="127.0.0.1:3000"
-export LEPTOS_RELOAD_PORT="3001"
-```
-Finally, run the server binary.
-
-## Licensing
-
-This template itself is released under the Unlicense. You should replace the LICENSE for your own application with an appropriate license if you plan to release it publicly.

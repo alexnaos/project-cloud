@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use wasm_bindgen_futures::spawn_local;
 
-// Функция для красивого вывода размера
 fn format_size(bytes: u64) -> String {
     if bytes < 1024 { format!("{} Б", bytes) }
     else if bytes < 1024 * 1024 { format!("{:.1} КБ", bytes as f64 / 1024.0) }
@@ -29,9 +28,11 @@ pub struct CloudAccount {
 
 #[component]
 pub fn App() -> impl IntoView {
-    let (current_path, set_current_path) = signal(".".to_string());
+    // СТАРТОВЫЙ ПУТЬ ТЕПЕРЬ C:/
+    let (current_path, set_current_path) = signal("C:/".to_string());
+    let (manual_path, set_manual_path) = signal("C:/".to_string());
+    
     let (files, set_files) = signal(Vec::<FileInfo>::new());
-    // Теперь храним HashMap: путь -> размер файла
     let (selected_files, set_selected_files) = signal(HashMap::<String, u64>::new());
     let (status, set_status) = signal("Готов к работе".to_string());
 
@@ -42,13 +43,17 @@ pub fn App() -> impl IntoView {
     let (show_add_form, set_show_add_form) = signal(false);
 
     let fetch_files = move |path: String| {
-        let path_clone = path.clone();
+        // Заменяем обратные слеши на прямые для безопасной передачи в URL
+        let safe_path = path.replace('\\', "/");
+        let path_clone = safe_path.clone();
+        
         spawn_local(async move {
             let url = format!("/api/browse?path={}", path_clone);
             if let Ok(resp) = gloo_net::http::Request::get(&url).send().await {
                 if let Ok(data) = resp.json::<Vec<FileInfo>>().await {
                     set_files.set(data);
-                    set_current_path.set(path_clone);
+                    set_current_path.set(path_clone.clone());
+                    set_manual_path.set(path_clone);
                 }
             }
         });
@@ -106,7 +111,7 @@ pub fn App() -> impl IntoView {
     };
 
     Effect::new(move |_| {
-        fetch_files(".".to_string());
+        fetch_files("C:/".to_string());
         fetch_accounts();
     });
 
@@ -121,7 +126,23 @@ pub fn App() -> impl IntoView {
     
     let go_to_folder = move |path: String| { fetch_files(path); };
 
-    // Вычисляем общий размер выбранного
+    // ФУНКЦИЯ ПЕРЕХОДА НА УРОВЕНЬ ВЫШЕ
+    let go_up = move |_| {
+        let current = current_path.get();
+        let path = std::path::Path::new(&current);
+        if let Some(parent) = path.parent() {
+            fetch_files(parent.to_string_lossy().to_string());
+        }
+    };
+
+    // ФУНКЦИЯ ПЕРЕХОДА ПО РУЧНОМУ ВВОДУ
+    let manual_go = move |_| {
+        let path = manual_path.get();
+        if !path.is_empty() {
+            fetch_files(path);
+        }
+    };
+
     let total_size = move || {
         selected_files.get().values().sum::<u64>()
     };
@@ -131,14 +152,27 @@ pub fn App() -> impl IntoView {
             
             <div style="flex: 2; border: 1px solid #ccc; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; border-radius: 8px;">
                 <h2 style="margin-top: 0;">"Проводник"</h2>
-                <div style="margin-bottom: 10px; background: #eee; padding: 8px; border-radius: 4px;">
+                
+                // ПАНЕЛЬ НАВИГАЦИИ
+                <div style="margin-bottom: 10px; display: flex; gap: 10px; align-items: center;">
+                    <button type="button" on:click=go_up style="padding: 6px 12px; cursor: pointer; font-weight: bold;">"⬆ Назад"</button>
+                    <input type="text" 
+                           prop:value=move || manual_path.get()
+                           on:input=move |ev| set_manual_path.set(event_target_value(&ev))
+                           style="flex: 1; padding: 6px; border: 1px solid #ccc; border-radius: 4px;" 
+                    />
+                    <button type="button" on:click=manual_go style="padding: 6px 12px; cursor: pointer;">"Перейти"</button>
+                </div>
+
+                <div style="margin-bottom: 10px; background: #eee; padding: 8px; border-radius: 4px; font-size: 0.9em; word-break: break-all;">
                     <strong>"Текущий путь: "</strong> {move || current_path.get()}
                 </div>
+                
                 <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <button type="button" on:click=select_all style="padding: 6px 12px; cursor: pointer;">"Выбрать все"</button>
                     <button type="button" on:click=clear_all style="padding: 6px 12px; cursor: pointer;">"Очистить"</button>
-                    <button type="button" on:click=move |_| fetch_files(".".to_string()) style="padding: 6px 12px; cursor: pointer;">"Обновить"</button>
                 </div>
+                
                 <ul style="list-style: none; padding: 0; margin: 0;">
                     {move || {
                         files.get().into_iter().map(|file| {
@@ -150,10 +184,10 @@ pub fn App() -> impl IntoView {
                             if file.is_dir {
                                 view! {
                                     <li style="padding: 8px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between;">
-                                        <div style="display: flex; align-items: center;">
+                                        <div style="display: flex; align-items: center; overflow: hidden;">
                                             <input type="checkbox" 
                                                    prop:checked=is_selected
-                                                   style="margin-right: 10px; cursor: pointer; width: 16px; height: 16px;"
+                                                   style="margin-right: 10px; cursor: pointer; width: 16px; min-width: 16px; height: 16px;"
                                                    on:change=move |ev| {
                                                        let checked = event_target_checked(&ev);
                                                        set_selected_files.update(|map| {
@@ -162,24 +196,22 @@ pub fn App() -> impl IntoView {
                                                        });
                                                    }
                                             />
-                                            <span style="font-size: 1.1em; cursor: pointer; color: #0366d6;" on:click=move |_| go_to_folder(file_path_click.clone())>
-                                                "📁 " {file.name.clone()} " (открыть)"
+                                            <span style="font-size: 1.1em; cursor: pointer; color: #0366d6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" on:click=move |_| go_to_folder(file_path_click.clone())>
+                                                "📁 " {file.name.clone()}
                                             </span>
                                         </div>
-                                        // ДОБАВЛЕНО: Отображение размера папки
-                                        <span style="color: gray; font-size: 0.9em;">
+                                        <span style="color: gray; font-size: 0.9em; white-space: nowrap; margin-left: 10px;">
                                             {format_size(file.size)}
                                         </span>
                                     </li>
                                 }.into_any()
                             } else {
-                                // ... блок для файлов остается без изменений ...
                                 view! {
                                     <li style="padding: 8px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between;">
-                                        <div style="display: flex; align-items: center;">
+                                        <div style="display: flex; align-items: center; overflow: hidden;">
                                             <input type="checkbox" 
                                                    prop:checked=is_selected 
-                                                   style="margin-right: 10px; cursor: pointer; width: 16px; height: 16px;"
+                                                   style="margin-right: 10px; cursor: pointer; width: 16px; min-width: 16px; height: 16px;"
                                                    on:change=move |ev| {
                                                        let checked = event_target_checked(&ev);
                                                        set_selected_files.update(|map| {
@@ -188,9 +220,11 @@ pub fn App() -> impl IntoView {
                                                        });
                                                    }
                                             />
-                                            "📄 " {file.name.clone()}
+                                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                "📄 " {file.name.clone()}
+                                            </span>
                                         </div>
-                                        <span style="color: gray; font-size: 0.9em;">
+                                        <span style="color: gray; font-size: 0.9em; white-space: nowrap; margin-left: 10px;">
                                             {format_size(file.size)}
                                         </span>
                                     </li>
@@ -202,7 +236,6 @@ pub fn App() -> impl IntoView {
             </div>
 
             <div style="flex: 1; border: 1px solid #ccc; padding: 10px; background: #f9f9f9; display: flex; flex-direction: column; border-radius: 8px;">
-                // ВЫВОДИМ ОБЪЕМ В ЗАГОЛОВКЕ
                 <h3 style="margin-top: 0;">
                     "Выбрано: " {move || selected_files.get().len()} 
                     " (" {move || format_size(total_size())} ")"
